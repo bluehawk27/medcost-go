@@ -1,0 +1,7 @@
+
+database: 
+    host: 'medcost-dev.crjriys0s5jc.us-west-2.rds.amazonaws.com'
+    username: 'admin'
+    password: 'Hawk27396!!'
+    port: '3306'
+    name: 'medcost-dev'

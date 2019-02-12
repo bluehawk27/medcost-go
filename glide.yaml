@@ -1,0 +1,21 @@
+package: github.com/bluehawk27/medcost
+import:
+- package: github.com/Sirupsen/logrus
+  version: ^1.0.4
+- package: github.com/go-sql-driver/mysql
+  version: ^1.3.0
+- package: github.com/gorilla/mux
+  version: ^1.6.0
+- package: github.com/jmoiron/sqlx
+- package: github.com/spf13/viper
+  version: ~1.3.1
+- package: github.com/rubenv/sql-migrate
+  subpackages:
+  - '...'
+- package: github.com/pressly/goose
+  version: ~2.4.5
+  subpackages:
+  - cmd/goose
+- package: github.com/mitchellh/go-homedir
+- package: go.uber.org/zap
+  version: ~1.9.1
