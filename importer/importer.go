@@ -2,10 +2,13 @@ package importer
 
 import (
 	"bufio"
+	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/bluehawk27/medcost-go/util"
 
@@ -31,7 +34,8 @@ func NewImporter() *Importer {
 	return imp
 }
 
-func (i *Importer) ImportInpatientData(f string) error {
+// ImportInpatientData : imports the files for inpatient data
+func (i *Importer) ImportInpatientData(ctx context.Context, f string) error {
 
 	csvFile, err := os.Open(f)
 	if err != nil {
@@ -45,15 +49,37 @@ func (i *Importer) ImportInpatientData(f string) error {
 		}
 		return err
 	}
+	if len(lines) <= 1 || lines == nil {
+		return errors.New("this csv has no lines to insert")
+	}
 
-	for i, line := range lines {
-		if i == 0 {
-			continue //skip header
+	for index, line := range lines {
+		impIn := ImportInpatient{}
+		inp, err := i.lineToImportInpatient(ctx, line, &impIn)
+		if err != nil {
+			return err
 		}
 
+		if index == 0 {
+			continue //skip header
+		}
+		// lat, long := util.GeocodeAddress(p)
 		drg := util.ParseDrg(line[0])
-		fmt.Println(*drg.Code)
-		fmt.Println(*drg.Name)
+		drgID, err := i.getOrInsertDRG(ctx, drg)
+		if err != nil {
+			return err
+		}
+
+		provID, err := i.getOrInsertProvider(ctx, inp.Provider)
+
+		inp.Inpatient.ProviderID = provID
+		inp.Inpatient.DrgID = drgID
+		inpSvc, err := i.Store.InsertInpatientService(ctx, inp.Inpatient)
+		if err != nil {
+			log.Fatal("error inserting patient data", err)
+			return err
+		}
+
 		fmt.Println("DRG Def: ", line[0])
 		fmt.Println("Provoder_id: ", line[1])
 		fmt.Println("Provider_name: ", line[2])
@@ -62,17 +88,70 @@ func (i *Importer) ImportInpatientData(f string) error {
 		fmt.Println("Provider_state: ", line[5])
 		fmt.Println("Provider_zip_code: ", line[6])
 		fmt.Println("Provider_HRR: ", line[7])
-		fmt.Println("Provider_total_discharges: ", line[8])
-		fmt.Println("Provider_avg_covered_charges: ", line[9])
-		fmt.Println("Provider_avg_total_payments: ", line[10])
-		fmt.Println("Provider_avg_medicare_payments: ", line[11])
+		fmt.Println("Provider_inpatient_total_discharges: ", line[8])
+		fmt.Println("Provider_inpatient_avg_covered_charges: ", line[9])
+		fmt.Println("Provider_inpatient_avg_total_payments: ", line[10])
+		fmt.Println("Provider_inpatient_avg_medicare_payments: ", line[11])
 		fmt.Println("#################################################")
-		// p := store.Provider{}
-
-		// i.Store.InsertProvider()
 	}
 
 	return nil
+}
+
+func (i *Importer) getOrInsertDRG(ctx context.Context, drg *store.DRG) (*int, error) {
+	drgsByID, err := i.Store.GetDrgByDRGID(ctx, drg.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*drgsByID) < 1 {
+		insertedDrg, err := i.Store.InsertDrg(ctx, drg)
+		if err != nil {
+			return nil, err
+		}
+
+		insDrg := *insertedDrg
+		return &insDrg[0].ID, nil
+	}
+
+	returnedDrgs := *drgsByID
+	return &returnedDrgs[0].ID, nil
+}
+
+func (i *Importer) getOrInsertProvider(ctx context.Context, prov *store.Provider) (*int, error) {
+	drgsByID, err := i.Store.GetProviderByProviderID(ctx, prov.ProviderID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*drgsByID) < 1 {
+		lat, long, err := util.GeocodeAddress(*prov)
+		if err != nil {
+			log.Fatal("Error geocoding the address")
+			return nil, err
+		}
+
+		prov.Latitude = &lat
+		prov.Longitude = &long
+		insertedDrg, err := i.Store.InsertProvider(ctx, prov)
+		if err != nil {
+			return nil, err
+		}
+
+		insDrg := *insertedDrg
+		return &insDrg[0].ID, nil
+	}
+
+	returnedDrgs := *drgsByID
+	return &returnedDrgs[0].ID, nil
+}
+
+func (i *Importer) lineToImportInpatient(ctx context.Context, line []string, impIn *ImportInpatient) (ImportInpatient, error) {
+	impIn.Provider.ProviderID =
+	impIn.Provider.Name =
+	impIn.Provider.Street =
+	i, err := strconv.Atoi(s)
+
 }
 
 // var people []Person

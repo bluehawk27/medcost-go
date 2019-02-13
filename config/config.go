@@ -19,7 +19,7 @@ func getProjectPath() string {
 		return ""
 	}
 	// Traverse back from current directory until service base dir is reached and add to config path
-	for !strings.HasSuffix(dir, "medcost") && dir != "/" {
+	for !strings.HasSuffix(dir, "medcost-go") && dir != "/" {
 		dir, err = filepath.Abs(dir + "/..")
 		if err != nil {
 			break
@@ -42,7 +42,7 @@ func Init() {
 	viper.BindEnv("configPath")
 
 	viper.SetDefault("configFile", "config")
-	viper.SetDefault("configPath", "/")
+	// viper.SetDefault("configPath", "../medcost-go")
 
 	viper.SetDefault("logging.level", "DEBUG")
 	viper.SetDefault("logging.errorLogFile", "error.log")
@@ -58,6 +58,11 @@ func Init() {
 		log.Println("Error using config file:", viper.ConfigFileUsed())
 		log.Println(err.Error())
 	}
+
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
 
 }
 

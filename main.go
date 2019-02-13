@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/bluehawk27/medcost-go/config"
@@ -10,5 +11,6 @@ import (
 func main() {
 	config.Init()
 	i := importer.NewImporter()
-	fmt.Println(i.ImportInpatientData("test-Medicare_Provider_Charge_Inpatient_DRG100_FY2012.csv"))
+	ctx := context.Background()
+	fmt.Println(i.ImportInpatientData(ctx, "test-Medicare_Provider_Charge_Inpatient_DRG100_FY2012.csv"))
 }
