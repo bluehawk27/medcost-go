@@ -1,12 +1,10 @@
-hash: 6372a717cec6333d1e36da0201bcf29e4c66f18aec57f0ebf831b2ef7f9c99d1
-updated: 2019-02-11T22:35:52.120387-08:00
+hash: 8b6cbdeec70123de2a895f31e1bfc1a7835d010aff919fe19b72905e0eb9871c
+updated: 2019-02-20T18:46:03.286625-08:00
 imports:
 - name: github.com/fsnotify/fsnotify
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/go-sql-driver/mysql
   version: 72cd26f257d44c1114970e19afddcd812016007e
-- name: github.com/gorilla/mux
-  version: a7962380ca08b5a188038c69871b8d3fbdf31e89
 - name: github.com/hashicorp/hcl
   version: 23c074d0eceb2b8a5bfdbb271ab780cde70f05a8
   subpackages:
@@ -20,7 +18,7 @@ imports:
   - json/scanner
   - json/token
 - name: github.com/jmoiron/sqlx
-  version: 82935fac6c1a317907c8f43ed3f7f85ea844a78b
+  version: d161d7a76b5661016ad0b085869f77fd410f3e6a
   subpackages:
   - reflectx
 - name: github.com/joho/godotenv
@@ -30,19 +28,11 @@ imports:
 - name: github.com/magiconair/properties
   version: 49d762b9817ba1c2e9d0c69183c2b4a8b8f1d934
 - name: github.com/mitchellh/go-homedir
-  version: b8bc1bf767474819792c23f32d8286a45736f1c6
+  version: af06845cf3004701891bf4fdb884bfe4920b3727
 - name: github.com/mitchellh/mapstructure
   version: 06020f85339e21b2478f756a78e295255ffa4d6a
 - name: github.com/pelletier/go-toml
   version: 4e9e0ee19b60b13eb79915933f44d8ed5f268bdd
-- name: github.com/pressly/goose
-  version: 7a98874933001af28951c83e958b1db750f39f8d
-  subpackages:
-  - cmd/goose
-- name: github.com/rubenv/sql-migrate
-  version: 5a8808c14925f69d2228981db113f672ad047e69
-  subpackages:
-  - '...'
 - name: github.com/Sirupsen/logrus
   version: e1e72e9de974bd926e5c56f83753fba2df402ce5
 - name: github.com/spf13/afero
@@ -57,8 +47,6 @@ imports:
   version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
 - name: github.com/spf13/viper
   version: 6d33b5a963d922d182c91e8a1c88d81fd150cfd4
-- name: go.uber.org/zap
-  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
 - name: golang.org/x/crypto
   version: b080dc9a8c480b08e698fb1219160d598526310f
   subpackages:
@@ -74,7 +62,7 @@ imports:
   - transform
   - unicode/norm
 - name: google.golang.org/appengine
-  version: 99bc4335fe23898c0a61f5b35afabb6d11f29094
+  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:
   - cloudsql
 - name: gopkg.in/yaml.v2
