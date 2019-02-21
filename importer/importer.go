@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/bluehawk27/medcost-go/util"
 
@@ -39,6 +38,7 @@ func (i *Importer) ImportInpatientData(ctx context.Context, f string) error {
 
 	csvFile, err := os.Open(f)
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	reader := csv.NewReader(bufio.NewReader(csvFile))
@@ -54,44 +54,36 @@ func (i *Importer) ImportInpatientData(ctx context.Context, f string) error {
 	}
 
 	for index, line := range lines {
+		if index == 0 {
+			continue //skip header
+		}
+
 		impIn := ImportInpatient{}
 		inp, err := i.lineToImportInpatient(ctx, line, &impIn)
 		if err != nil {
 			return err
 		}
 
-		if index == 0 {
-			continue //skip header
-		}
-		// lat, long := util.GeocodeAddress(p)
-		drg := util.ParseDrg(line[0])
-		drgID, err := i.getOrInsertDRG(ctx, drg)
+		drgID, err := i.getOrInsertDRG(ctx, &inp.Drg)
 		if err != nil {
 			return err
 		}
 
-		provID, err := i.getOrInsertProvider(ctx, inp.Provider)
+		provID, err := i.getOrInsertProvider(ctx, &inp.Provider)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 
 		inp.Inpatient.ProviderID = provID
 		inp.Inpatient.DrgID = drgID
-		inpSvc, err := i.Store.InsertInpatientService(ctx, inp.Inpatient)
+		inp.Inpatient.Year = util.DetectYear(f)
+		inpSvc, err := i.getOrInsertInpatientSvc(ctx, inp)
 		if err != nil {
-			log.Fatal("error inserting patient data", err)
+			log.Fatal("error inserting Inpatient data", err)
 			return err
 		}
-
-		fmt.Println("DRG Def: ", line[0])
-		fmt.Println("Provoder_id: ", line[1])
-		fmt.Println("Provider_name: ", line[2])
-		fmt.Println("Provider_street_address: ", line[3])
-		fmt.Println("Provider_city: ", line[4])
-		fmt.Println("Provider_state: ", line[5])
-		fmt.Println("Provider_zip_code: ", line[6])
-		fmt.Println("Provider_HRR: ", line[7])
-		fmt.Println("Provider_inpatient_total_discharges: ", line[8])
-		fmt.Println("Provider_inpatient_avg_covered_charges: ", line[9])
-		fmt.Println("Provider_inpatient_avg_total_payments: ", line[10])
-		fmt.Println("Provider_inpatient_avg_medicare_payments: ", line[11])
+		log.Info(inpSvc)
 		fmt.Println("#################################################")
 	}
 
@@ -101,12 +93,14 @@ func (i *Importer) ImportInpatientData(ctx context.Context, f string) error {
 func (i *Importer) getOrInsertDRG(ctx context.Context, drg *store.DRG) (*int, error) {
 	drgsByID, err := i.Store.GetDrgByDRGID(ctx, drg.Code)
 	if err != nil {
+		log.Error("error Getting the DRG by ID", err)
 		return nil, err
 	}
 
 	if len(*drgsByID) < 1 {
 		insertedDrg, err := i.Store.InsertDrg(ctx, drg)
 		if err != nil {
+			log.Error("error Inserting the DRG", err, drg)
 			return nil, err
 		}
 
@@ -119,57 +113,72 @@ func (i *Importer) getOrInsertDRG(ctx context.Context, drg *store.DRG) (*int, er
 }
 
 func (i *Importer) getOrInsertProvider(ctx context.Context, prov *store.Provider) (*int, error) {
-	drgsByID, err := i.Store.GetProviderByProviderID(ctx, prov.ProviderID)
+	provByID, err := i.Store.GetProviderByProviderID(ctx, prov.ProviderID)
 	if err != nil {
+		log.Error("error Getting the providerby ID", err)
 		return nil, err
 	}
 
-	if len(*drgsByID) < 1 {
+	if len(*provByID) < 1 {
 		lat, long, err := util.GeocodeAddress(*prov)
 		if err != nil {
-			log.Fatal("Error geocoding the address")
-			return nil, err
+			log.Error("Error geocoding the address", err)
 		}
 
 		prov.Latitude = &lat
 		prov.Longitude = &long
-		insertedDrg, err := i.Store.InsertProvider(ctx, prov)
+		insertedProv, err := i.Store.InsertProvider(ctx, prov)
 		if err != nil {
+			log.Error("Error Inserting the provider", err, prov.ID)
 			return nil, err
 		}
 
-		insDrg := *insertedDrg
-		return &insDrg[0].ID, nil
+		insProv := *insertedProv
+		return &insProv[0].ID, nil
 	}
 
-	returnedDrgs := *drgsByID
-	return &returnedDrgs[0].ID, nil
+	returnedProvs := *provByID
+	return &returnedProvs[0].ID, nil
 }
 
-func (i *Importer) lineToImportInpatient(ctx context.Context, line []string, impIn *ImportInpatient) (ImportInpatient, error) {
-	impIn.Provider.ProviderID =
-	impIn.Provider.Name =
-	impIn.Provider.Street =
-	i, err := strconv.Atoi(s)
+func (i *Importer) lineToImportInpatient(ctx context.Context, line []string, impIn *ImportInpatient) (*ImportInpatient, error) {
+	drg := util.ParseDrg(line[0])
+	impIn.Drg = *drg
+	impIn.Provider.ProviderID = util.StringToInt(line[1])
+	impIn.Provider.Name = &line[2]
+	impIn.Provider.Street = &line[3]
+	impIn.Provider.City = &line[4]
+	impIn.Provider.State = &line[5]
+	impIn.Provider.Zipcode = util.StringToInt(line[6])
+	impIn.Provider.HrrDescription = &line[7]
+	impIn.Inpatient.TotalDiscarges = util.StringToInt(line[8])
+	impIn.Inpatient.AvgCoveredCharges = util.StringToFloat64(line[9])
+	impIn.Inpatient.AvgTotalPayments = util.StringToFloat64(line[10])
+	impIn.Inpatient.AvgMedicarePayment = util.StringToFloat64(line[11])
 
+	return impIn, nil
 }
 
-// var people []Person
-// for {
-// 	line, error := reader.Read()
-// 	if error == io.EOF {
-// 		break
-// 	} else if error != nil {
-// 		log.Fatal(error)
-// 	}
-// 	people = append(people, Person{
-// 		Firstname: line[0],
-// 		Lastname:  line[1],
-// 		Address: &Address{
-// 			City:  line[2],
-// 			State: line[3],
-// 		},
-// 	})
-// }
-// peopleJson, _ := json.Marshal(people)
-// fmt.Println(string(peopleJson))
+func (i *Importer) getOrInsertInpatientSvc(ctx context.Context, inp *ImportInpatient) (*int, error) {
+	inpSvc, err := i.Store.GetInpatientServiceByProvIDDrgIDYear(ctx, inp.Inpatient.ProviderID, inp.Inpatient.DrgID, inp.Inpatient.Year)
+	if err != nil {
+		log.Error("error Getting the inpatienservice", err)
+		return nil, err
+	}
+
+	if len(*inpSvc) < 1 {
+		insertedInpSvc, err := i.Store.InsertInpatientService(ctx, &inp.Inpatient)
+		if err != nil {
+			log.Fatal("error inserting Inpatient data", err)
+			return nil, err
+		}
+
+		insInpatient := *insertedInpSvc
+		log.Info("inpatient Service inserted:")
+		return &insInpatient[0].ID, nil
+	}
+
+	log.Info("inpatient Service Already Existed: ")
+	returnedInpatient := *inpSvc
+	return &returnedInpatient[0].ID, nil
+}

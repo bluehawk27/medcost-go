@@ -2,9 +2,9 @@ package store
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/bluehawk27/medcost-go/config"
 
 	// driver required by sqlx
@@ -25,6 +25,7 @@ type StoreType interface {
 	InsertDrg(ctx context.Context, drg *DRG) (*[]DRG, error)
 	GetInpatientServiceByID(ctx context.Context, id int) (*[]Inpatient, error)
 	GetInpatientServiceByProviderID(ctx context.Context, id *int) (*[]Inpatient, error)
+	GetInpatientServiceByProvIDDrgIDYear(ctx context.Context, provID *int, drgID *int, year *int) (*[]Inpatient, error)
 	InsertInpatientService(ctx context.Context, in *Inpatient) (*[]Inpatient, error)
 }
 
@@ -37,11 +38,13 @@ type Store struct {
 func NewStore() (StoreType, error) {
 	connection, err := config.DBConnectionString()
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
-	// "admin:Hawk27396!!@tcp(medcost-dev.crjriys0s5jc.us-west-2.rds.amazonaws.com:3306)/medcost-dev?parseTime=true"
+
 	db, err := sqlx.Connect(driver, connection)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	s := &Store{
@@ -56,6 +59,7 @@ func (s *Store) GetProviderByID(ctx context.Context, id int) (*[]Provider, error
 	p := []Provider{}
 
 	if err := s.db.Select(&p, getProviderByID, id); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -67,6 +71,7 @@ func (s *Store) GetProviderByProviderID(ctx context.Context, id *int) (*[]Provid
 	p := []Provider{}
 
 	if err := s.db.Select(&p, getProviderByProviderID, id); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -76,15 +81,23 @@ func (s *Store) GetProviderByProviderID(ctx context.Context, id *int) (*[]Provid
 // InsertProvider : Insert Provider
 func (s *Store) InsertProvider(ctx context.Context, p *Provider) (*[]Provider, error) {
 	now := time.Now().UTC().Format(ISODateFormat)
+	p.CreatedAt = &now
 
-	result := s.db.MustExec(insertProvider, p.ProviderID, p.Name, p.Street, p.City, p.Zipcode, p.State, p.HrrDescription, now, p.Latitude, p.Longitude)
+	result, err := s.db.NamedExec(insertProvider, *p)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
 	id, err := result.LastInsertId()
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
 	prov, err := s.GetProviderByID(ctx, int(id))
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -96,6 +109,7 @@ func (s *Store) GetDrgByID(ctx context.Context, id int) (*[]DRG, error) {
 	drg := []DRG{}
 
 	if err := s.db.Select(&drg, getDrgByID, id); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -107,6 +121,7 @@ func (s *Store) GetDrgByDRGID(ctx context.Context, id *int) (*[]DRG, error) {
 	drg := []DRG{}
 
 	if err := s.db.Select(&drg, getDrgByDRGID, id); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -115,23 +130,21 @@ func (s *Store) GetDrgByDRGID(ctx context.Context, id *int) (*[]DRG, error) {
 
 // InsertDrg : Insert Diagnostic Related Group
 func (s *Store) InsertDrg(ctx context.Context, drg *DRG) (*[]DRG, error) {
-	// INSERT into diagnostic_related_group (name, code) values ("test", 234)
-	fmt.Println("here we are: ", *drg.Name, *drg.Code)
-	fmt.Println(len(*drg.Name))
 	result, err := s.db.NamedExec(insertDrg, *drg)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		fmt.Println("error is here2")
+		log.Error(err)
 		return nil, err
 	}
-	// fmt.Println(id)
+
 	drgInserted, err := s.GetDrgByID(ctx, int(id))
 	if err != nil {
-		fmt.Println("error is here3")
+		log.Error(err)
 		return nil, err
 	}
 
@@ -143,6 +156,7 @@ func (s *Store) GetInpatientServiceByID(ctx context.Context, id int) (*[]Inpatie
 	in := []Inpatient{}
 
 	if err := s.db.Select(&in, getInpatientServiceByID, id); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -154,6 +168,19 @@ func (s *Store) GetInpatientServiceByProviderID(ctx context.Context, id *int) (*
 	in := []Inpatient{}
 
 	if err := s.db.Select(&in, getInpatientServiceByProviderID, id); err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	return &in, nil
+}
+
+// GetInpatientServiceByProviderID : Getprovider by provider_id
+func (s *Store) GetInpatientServiceByProvIDDrgIDYear(ctx context.Context, provID *int, drgID *int, year *int) (*[]Inpatient, error) {
+	in := []Inpatient{}
+
+	if err := s.db.Select(&in, getInpatientServiceByProvIDDrgIDYear, provID, drgID, year); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -163,15 +190,22 @@ func (s *Store) GetInpatientServiceByProviderID(ctx context.Context, id *int) (*
 // InsertInpatientService : Insert Provider
 func (s *Store) InsertInpatientService(ctx context.Context, in *Inpatient) (*[]Inpatient, error) {
 	now := time.Now().UTC().Format(ISODateFormat)
+	in.CreatedAt = &now
 
-	result := s.db.MustExec(insertInpatientService, in.ProviderID, in.DrgID, in.TotalDiscarges, in.AvgCoveredCharges, in.AvgTotalPayments, in.AvgMedicarePayment, in.Year, now)
+	result, err := s.db.NamedExec(insertInpatientService, *in)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 	id, err := result.LastInsertId()
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
 	inp, err := s.GetInpatientServiceByID(ctx, int(id))
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 

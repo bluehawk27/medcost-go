@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/joho/godotenv"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/spf13/viper"
@@ -34,6 +35,7 @@ func getHomePath() string {
 	return home
 }
 
+// Init : Initialize all the things
 func Init() {
 
 	// Find home directory.
@@ -59,14 +61,14 @@ func Init() {
 		log.Println(err.Error())
 	}
 
-	// err := godotenv.Load()
-	// if err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// }
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 }
 
-// GetRedisConfig : Gets the MYSQL Configuration
+// GetDatabaseConfig : Gets the MYSQL Configuration
 func GetDatabaseConfig() Database {
 
 	r := Database{
@@ -80,6 +82,7 @@ func GetDatabaseConfig() Database {
 	return r
 }
 
+// DBConnectionString : Gets the MYSQL Configuration
 func DBConnectionString() (string, error) {
 	db := GetDatabaseConfig()
 	if db.DBname == "" || db.Host == "" || db.Password == "" || db.Username == "" || db.Port == "" {
