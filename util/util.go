@@ -1,6 +1,11 @@
 package util
 
 import (
+	"bufio"
+	"encoding/csv"
+	"errors"
+	"io"
+	"os"
 	"strconv"
 	"strings"
 
@@ -21,6 +26,16 @@ func ParseDrg(drg string) *store.DRG {
 	return &drgStruct
 }
 
+func ParseApc(apc string) *store.APC {
+	apcStruct := store.APC{}
+	stringSlice := strings.Split(apc, " - ")
+
+	apcStruct.Code = StringToInt(stringSlice[0])
+	apcStruct.Name = &stringSlice[1]
+
+	return &apcStruct
+}
+
 func StringToInt(s string) *int {
 	i, err := strconv.Atoi(s)
 	if err != nil {
@@ -32,9 +47,11 @@ func StringToInt(s string) *int {
 }
 
 func StringToFloat64(s string) *float64 {
+	s = normalizeMoneyFields(s)
+
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		log.Error("Error converting string to float64")
+		log.Error("Error converting string to float64 :", err)
 		return nil
 	}
 
@@ -51,4 +68,48 @@ func DetectYear(s string) *int {
 	}
 
 	return &defaultYear
+}
+
+func normalizeMoneyFields(s string) string {
+	if len(s) > 0 && s[0] == '"' {
+		s = s[1:]
+	}
+
+	if len(s) > 0 && s[len(s)-1] == '"' {
+		s = s[:len(s)-1]
+	}
+
+	if strings.Contains(s, "$") {
+		s = strings.Trim(s, "$")
+
+	}
+
+	if strings.Contains(s, ",") {
+		s = strings.Replace(s, ",", "", -1)
+	}
+
+	return s
+}
+
+func FileToLines(f string) ([][]string, error) {
+	csvFile, err := os.Open(f)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	reader := csv.NewReader(bufio.NewReader(csvFile))
+	lines, err := reader.ReadAll()
+	if err != nil {
+		if err == io.EOF {
+			log.Fatal("The file is empty")
+		}
+		return nil, err
+	}
+
+	if len(lines) <= 1 || lines == nil {
+		return nil, errors.New("this csv has no lines to insert")
+	}
+
+	return lines, nil
 }

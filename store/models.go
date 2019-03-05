@@ -31,7 +31,7 @@ type APC struct {
 type Outpatient struct {
 	ID                     int      `json:"id" db:"id"`
 	ProviderID             *int     `json:"provider_id" db:"provider_id"`
-	ApcID                  *int     `json:"ambulatory_payment_classification_id" db:"ambulatory_payment_classification_id"`
+	ApcID                  *int     `json:"ambulatory_payment_classification_id" db:"apc_id"`
 	ServicesCount          *int     `json:"services_count" db:"services_count"`
 	AvgEstSubmittedCharges *float64 `json:"avg_est_submitted_charges" db:"avg_est_submitted_charges"`
 	AvgTotalPayments       *float64 `json:"avg_total_payments" db:"avg_total_payments"`

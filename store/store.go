@@ -15,7 +15,7 @@ import (
 const driver string = "mysql"
 const ISODateFormat = time.RFC3339 //"2006-01-28T15:04:05Z"
 
-//  StoreType Interface exposes methods that can later be used for mocking calls
+// StoreType... Interface exposes methods that can later be used for mocking calls
 type StoreType interface {
 	GetProviderByID(ctx context.Context, id int) (*[]Provider, error)
 	GetProviderByProviderID(ctx context.Context, id *int) (*[]Provider, error)
@@ -27,6 +27,13 @@ type StoreType interface {
 	GetInpatientServiceByProviderID(ctx context.Context, id *int) (*[]Inpatient, error)
 	GetInpatientServiceByProvIDDrgIDYear(ctx context.Context, provID *int, drgID *int, year *int) (*[]Inpatient, error)
 	InsertInpatientService(ctx context.Context, in *Inpatient) (*[]Inpatient, error)
+	GetApcByID(ctx context.Context, id int) (*[]APC, error)
+	GetApcByAPCID(ctx context.Context, id *int) (*[]APC, error)
+	InsertApc(ctx context.Context, apc *APC) (*[]APC, error)
+	GetOutpatientServiceByID(ctx context.Context, id int) (*[]Outpatient, error)
+	GetOutpatientServiceByProviderID(ctx context.Context, id *int) (*[]Outpatient, error)
+	GetOutpatientServiceByProvIDApcIDYear(ctx context.Context, provID *int, apcID *int, year *int) (*[]Outpatient, error)
+	InsertOutpatientService(ctx context.Context, out *Outpatient) (*[]Outpatient, error)
 }
 
 // Store : Represents the DB object could add a config here to read in driver and address
@@ -210,4 +217,116 @@ func (s *Store) InsertInpatientService(ctx context.Context, in *Inpatient) (*[]I
 	}
 
 	return inp, nil
+}
+
+// -------------------------------OUTPATIENT RELATED QUERIES--------------------------------------//
+//                                                                                                //
+//------------------------------------------------------------------------------------------------//
+
+// GetOutpatientServiceByID : Get All Provider by pk
+func (s *Store) GetOutpatientServiceByID(ctx context.Context, id int) (*[]Outpatient, error) {
+	out := []Outpatient{}
+
+	if err := s.db.Select(&out, getOutpatientServiceByID, id); err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// GetOutpatientServiceByProviderID : Getprovider by provider_id
+func (s *Store) GetOutpatientServiceByProviderID(ctx context.Context, id *int) (*[]Outpatient, error) {
+	out := []Outpatient{}
+
+	if err := s.db.Select(&out, getOutpatientServiceByProviderID, id); err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// GetOutpatientServiceByProvIDApcIDYear : Getprovider by provider_id
+func (s *Store) GetOutpatientServiceByProvIDApcIDYear(ctx context.Context, provID *int, apcID *int, year *int) (*[]Outpatient, error) {
+	out := []Outpatient{}
+
+	if err := s.db.Select(&out, getOutpatientServiceByProvIDApcIDYear, provID, apcID, year); err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// InsertOutpatientService : Insert Provider
+func (s *Store) InsertOutpatientService(ctx context.Context, out *Outpatient) (*[]Outpatient, error) {
+	now := time.Now().UTC().Format(ISODateFormat)
+	out.CreatedAt = &now
+
+	result, err := s.db.NamedExec(insertOutpatientService, *out)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	outp, err := s.GetOutpatientServiceByID(ctx, int(id))
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	return outp, nil
+}
+
+// GetApcByID : Get APC by pk
+func (s *Store) GetApcByID(ctx context.Context, id int) (*[]APC, error) {
+	apc := []APC{}
+
+	if err := s.db.Select(&apc, getApcByID, id); err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	return &apc, nil
+}
+
+// GetApcByAPCID : Get APC by code
+func (s *Store) GetApcByAPCID(ctx context.Context, id *int) (*[]APC, error) {
+	apc := []APC{}
+
+	if err := s.db.Select(&apc, getApcByAPCID, id); err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	return &apc, nil
+}
+
+// InsertApc : Insert Diagnostic Related Group
+func (s *Store) InsertApc(ctx context.Context, apc *APC) (*[]APC, error) {
+	result, err := s.db.NamedExec(insertApc, *apc)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	apcInserted, err := s.GetApcByID(ctx, int(id))
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	return apcInserted, nil
 }

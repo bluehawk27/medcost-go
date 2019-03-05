@@ -24,8 +24,17 @@ const getInpatientServiceByProvIDDrgIDYear = `SELECT * FROM inpatient WHERE prov
 const insertInpatientService = `INSERT INTO inpatient (provider_id, drg_id, total_discharges, avg_covered_charges, avg_total_payments, avg_medicare_payments, year, created_at) VALUES (:provider_id, :drg_id, :total_discharges, :avg_covered_charges, :avg_total_payments, :avg_medicare_payments, :year, :created_at)`
 
 // APC Queries
-const getApcByDRGID = `SELECT * FROM ambulatory_payment_classification WHERE code = ? LIMIT 1`
+const getApcByAPCID = `SELECT * FROM ambulatory_payment_classification WHERE code = ? LIMIT 1`
 
 const getApcByID = `SELECT * FROM ambulatory_payment_classification WHERE id = ? LIMIT 1`
 
 const insertApc = `INSERT INTO ambulatory_payment_classification (name, code) VALUES (:name, :code)`
+
+// Outpatient Queries
+const getOutpatientServiceByID = `SELECT * FROM outpatient WHERE id = ? LIMIT 1`
+
+const getOutpatientServiceByProviderID = `SELECT * FROM outpatient WHERE provider_id = ? LIMIT 1`
+
+const getOutpatientServiceByProvIDApcIDYear = `SELECT * FROM outpatient WHERE provider_id = ? AND apc_id = ? AND year = ?`
+
+const insertOutpatientService = `INSERT INTO outpatient (provider_id, apc_id, services_count, avg_est_submitted_charges, avg_total_payments, year, created_at) VALUES (:provider_id, :apc_id, :services_count, :avg_est_submitted_charges, :avg_total_payments, :year, :created_at)`

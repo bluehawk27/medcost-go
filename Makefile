@@ -6,4 +6,4 @@ test:
 
 start: 
 	go install
-	medcost
+	medcost-go

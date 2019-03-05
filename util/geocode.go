@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -55,22 +56,24 @@ type GeocodApi struct {
 
 // https://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,
 // +Mountain+View,+CA&key=YOUR_API_KEY
+// assign to provider and return that ?
 func GeocodeAddress(p store.Provider) (float64, float64, error) {
 	key := os.Getenv("API_KEY")
+
 	street := strings.Replace(*p.Street, " ", "+", -1)
 	city := strings.Replace(*p.City, " ", "+", -1)
 	state := strings.Replace(*p.State, " ", "+", -1)
-	log.Info(street, city, state)
 	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/geocode/json?address=%s,%s,+%s&key=%s", street, city, state, key)
-	log.Info(url)
-	res, err := makeRequest(url)
+
+	res, err := MakeRequest(url)
 	if err != nil {
 		log.Error("Error geocoding the address", err)
 		return 0.0, 0.0, err
 	}
 
-	log.Info(res)
-	lat, long, err := extractLatLong(res)
+	result := GeocodApi{}
+	json.NewDecoder(res).Decode(&result)
+	lat, long, err := extractLatLong(result)
 	if err != nil {
 		log.Error(err)
 		return 0.0, 0.0, err
@@ -79,17 +82,14 @@ func GeocodeAddress(p store.Provider) (float64, float64, error) {
 	return lat, long, nil
 }
 
-func makeRequest(url string) (GeocodApi, error) {
-	result := GeocodApi{}
+func MakeRequest(url string) (io.ReadCloser, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Error(err)
-		return result, err
+		return nil, err
 	}
 
-	json.NewDecoder(resp.Body).Decode(&result)
-
-	return result, nil
+	return resp.Body, nil
 }
 
 func extractLatLong(body GeocodApi) (float64, float64, error) {
